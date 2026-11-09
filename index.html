@@ -130,14 +130,31 @@ const pts=f=>'polygon('+Array.from({length:48},(_,i)=>{const t=i/48*Math.PI*2,r=
 const lobe=(n,a)=>t=>(1+a*Math.cos(n*t))/(1+a);
 const squircle=t=>Math.pow(Math.pow(Math.abs(Math.cos(t)),4)+Math.pow(Math.abs(Math.sin(t)),4),-.25);
 const shapes=[['#cabeff',lobe(1,0)],['#d4f0b0',lobe(6,.14)],['#ffb1c6',lobe(3,.2)],['#cabeff',squircle],['#d4f0b0',lobe(9,.07)],['#ffb1c6',lobe(4,.16)],['#cabeff',lobe(5,.12)],['#d4f0b0',lobe(1,0)]];
-$('.sp-shape').animate(shapes.map(([c,f],i)=>({clipPath:pts(f),backgroundColor:c,transform:'rotate('+i*50+'deg)',easing:'cubic-bezier(.2,0,0,1)'})),{duration:2000,fill:'forwards'});
-setTimeout(()=>{
+
+/* Splash loops until the page has really finished loading */
+$('.sp-shape').animate(shapes.map(([c,f],i)=>({clipPath:pts(f),backgroundColor:c,transform:'rotate('+i*50+'deg)',easing:'cubic-bezier(.2,0,0,1)'})),{duration:2000,iterations:Infinity,direction:'alternate'});
+
+let finished=false;
+const finish=()=>{
+  if(finished)return;
+  finished=true;
   const s=$('#splash');
   s.classList.add('out');
   body.classList.remove('locked');
   body.classList.add('ready');
   setTimeout(()=>s.remove(),900);
-},2000);
+};
+
+/* Real load: all resources (CSS, images, scripts) + web fonts */
+const pageLoaded=new Promise(res=>{
+  if(document.readyState==='complete')res();
+  else addEventListener('load',res,{once:true});
+});
+const fontsLoaded=document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve();
+Promise.all([pageLoaded,fontsLoaded]).then(finish);
+
+/* Safety net so a stalled request can never trap the visitor */
+setTimeout(finish,15000);
 
 
 const reveal=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');reveal.unobserve(e.target)}}),{threshold:.12});
